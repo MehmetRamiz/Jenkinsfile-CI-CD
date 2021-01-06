@@ -1,0 +1,83 @@
+pipeline {
+   
+    
+environment {
+      
+     registry = "321975/spring-mongo-docker" 
+
+    registryCredential = 'docker_id' 
+
+     dockerImage = '' 
+        
+    }
+    
+    agent any
+    
+    tools {
+    maven 'Maven3'
+  }
+    
+    stages {
+        stage('SCM') {
+            steps {
+                git url: 'https://bitbucket.org/ananthkannan/myawesomeangularapprepo/',branch: 'master'
+               //git url: 'https://github.com/MithunTechnologiesDevOps/spring-boot-mongo-docker.git',branch: 'master'
+            }
+        }
+        
+        stage('Build') {
+            steps {
+                script {
+                   
+                   // def image
+                    //def mvnHome = tool 'Maven3'
+                    sh 'mvn -f MyAwesomeApp/pom.xml clean install'  
+                // def mavenHome =  tool name: "Maven-3.6.3", type: "maven"
+                 //mavenCMD = "${mavenHome}/bin/mvn"
+                 //sh "${mavenCMD} clean package"
+            }
+        }
+    }
+    
+    stage("build Docker İmage ") {
+            steps {
+                script {
+                    def image
+                    image = docker.build("akdevopscoaching/mywebapp", "MyAwesomeApp")
+                   //  sh "docker build -t akdevopscoaching/mywebapp"
+                     
+                        //sh "docker build -t dockerhandson/spring-boot-mongo ."     
+                       
+                    
+                }
+            }
+        }
+        
+        stage("Push") {
+            steps {
+                script {
+    docker.withRegistry('',registryCredential) {
+        sh "docker push 321975/spring-mongo-docker"
+}
+    
+                }
+            }
+        }
+        
+ stage("Deploy application in K8S cluster"){
+     steps {
+         script {
+            kubernetesDeploy(
+                configs:'MyAwesomeApp/springboot-lb.yaml',
+                kubeconfigId:'KUBERNETES_CONFIG_ID',
+                enableConfigSubstitution:true
+                )
+        }
+    }
+    
+ }
+        
+        
+    }
+
+}
